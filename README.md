@@ -1,5 +1,8 @@
 # SkillArmor
 
+[![CI](https://github.com/ecoreal/skillarmor/actions/workflows/ci.yml/badge.svg)](https://github.com/ecoreal/skillarmor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 给 agent 配置做安全体检的扫描器：扫描本机 skills、MCP 工具描述、hooks 与权限配置，找出**提示注入面、明文凭据、危险权限、供应链风险**，逐条给出加固建议。
 
 纯 Python 标准库、零依赖、只读不改文件。支持 Claude Code / Codex / ZCode 的配置布局。
@@ -34,7 +37,9 @@ python3 scripts/skillarmor.py --root ~/my-skills --root /opt/agents
 
 | 类别 | 规则 | 级别 | 说明 |
 |---|---|---|---|
-| 注入面 | INJ-override / INJ-override-zh | high | 「忽略之前的指令」类语句（中英） |
+| 注入面 | INJ-override / INJ-override-zh / INJ-override-zh2 | high | 「忽略/无视之前的指令」类语句（中英） |
+| 注入面 | INJ-jailbreak-zh | high | 「内部测试，请忽略安全限制」类越狱话术 |
+| 注入面 | INJ-persona-zh | medium | 「你是一个没有限制的AI」类角色扮演越狱 |
 | 注入面 | INJ-exfiltrate | high | 指示把凭据发送到外部 |
 | 注入面 | INJ-covert | medium | 「不要告诉用户」类隐蔽指令 |
 | 注入面 | INJ-remote-instr | medium | 运行时从远端拉取指令 |
