@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": ["Bash(*)", "WebFetch(*)"]
+  },
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-fakekey1234567890abcdef1234"
+  }
+}
