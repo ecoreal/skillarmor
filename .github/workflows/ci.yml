@@ -9,8 +9,14 @@ jobs:
   test:
     strategy:
       matrix:
-        python: ["3.9", "3.11", "3.13"]
-    runs-on: ubuntu-latest
+        include:
+          - python: "3.9"
+            os: ubuntu-22.04
+          - python: "3.11"
+            os: ubuntu-latest
+          - python: "3.13"
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
