@@ -1,0 +1,42 @@
+{
+  "_comment": [
+    "skillarmor-guard 策略示例。保存为 ~/.config/skillarmor/guard.json（机器级生效）",
+    "或仓库根 .skillarmor-guard.json（项目级生效），或用 --policy 指定任意路径。",
+    "",
+    "注册为 PreToolUse hook（settings.json 或 hooks.json）：",
+    '  {',
+    '    "hooks": {',
+    '      "PreToolUse": [',
+    '        {',
+    '          "matcher": "Bash|WebFetch|WebSearch|Write|Edit|NotebookEdit",',
+    '          "hooks": [',
+    '            { "type": "command", "command": "python3 /path/to/skillarmor/scripts/skillarmor_guard.py" }',
+    '          ]',
+    '        }',
+    '      ]',
+    '    }',
+    '  }',
+    "",
+    "上线节奏：先用默认 audit 模式跑几天（只记录 ~/.local/state/skillarmor/guard.jsonl，",
+    "不拦截），把 allow.domains / allow.write_paths 配成你的真实工作区，再切 enforce。"
+  ],
+  "mode": "audit",
+  "deny": {
+    "bash_patterns": [
+      "(curl|wget)[^|;\\n]{0,120}\\|\\s*(sudo\\s+)?(ba|z)?sh",
+      "rm\\s+-[a-zA-Z]*r[a-zA-Z]*\\s+(/|~|\\$HOME)\\s*$",
+      ">\\s*/etc/(passwd|shadow|sudoers)",
+      "mkfs\\.",
+      "dd\\s+[^;|\\n]*of=/dev/(sd[a-z]|nvme[0-9]|disk)"
+    ],
+    "domains": [],
+    "_comment": "domains: 无论 audit/enforce 都重点标记的域名，如 [\"known-bad.example\"]"
+  },
+  "allow": {
+    "domains": [],
+    "_comment_domains": "非空 = allowlist 模式：enforce 模式下 WebFetch/WebSearch 只允许这些域名（支持 *.example.com）",
+    "write_paths": [],
+    "_comment_write_paths": "非空 = enforce 模式下 Write/Edit 只允许这些路径（glob，** 跨目录，~ 会展开）"
+  },
+  "log": "~/.local/state/skillarmor/guard.jsonl"
+}

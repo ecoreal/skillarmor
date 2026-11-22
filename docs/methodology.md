@@ -63,14 +63,15 @@ python3 scripts/skillarmor.py --json     # 交给 agent 逐条汇报
 - `CRED-*` → 移入环境变量 + **轮换该 key**
 - `HOOK-remote-exec` → 固定版本 + 本地校验脚本
 
-## 阶段 3 · 运行时可观测（Runtime）
+## 阶段 3 · 运行时守卫（Runtime）
 
-**目标：让"agent 平时到底在干什么"变成可回答的问题。**
+**目标：让"agent 平时到底在干什么"既可回答、又有底线。**
 
-- 审批模式上，破坏性命令保留人工确认；`bypassPermissions` 只留给一次性沙箱环境
+- **守卫** [`scripts/skillarmor_guard.py`](../scripts/skillarmor_guard.py)：注册为 PreToolUse hook，每次工具调用前按策略评估——危险命令 deny 列表、可选域名/写路径 allowlist。**默认 audit 模式**（只记录到 `~/.local/state/skillarmor/guard.jsonl`，不拦截），观察几天确认策略贴合真实工作流后再切 `enforce`。策略模板见 [`templates/guard-policy.example.json`](../templates/guard-policy.example.json)
+- 能力声明的静态对账（skill 脚本引用的域名 vs `capabilities.net.domains`）由扫描器的 `MANIFEST-*` 规则完成，见 [`docs/manifest-spec.md`](manifest-spec.md)
 - 定期看一眼工具调用画像：哪个工具在被高频调用？有没有意料之外的网络调用？
   - ZCode 用户可以直接用 [`zcusage`](https://github.com/ecoreal/zcusage)：`zcusage tools` 会按工具统计调用数、错误数、**destructive 与 network 调用数**——这是运行时行为的安全侧写
-- 发现异常调用的顺序：先看时间线（哪天开始）→ 对应那天装过的 skill / 改过的配置 → 回到阶段 1 复盘那个来源
+- 发现异常调用的顺序：先看守卫日志的时间线（哪天开始）→ 对应那天装过的 skill / 改过的配置 → 回到阶段 1 复盘那个来源
 
 ## 阶段 4 · 持续回归（Regression）
 
@@ -103,5 +104,5 @@ python3 scripts/skillarmor.py --json     # 交给 agent 逐条汇报
 ## 附录 B · 定位与边界
 
 - skillarmor 是**启发式**扫描：没命中 ≠ 安全，命中 ≠ 一定恶意。它和 NVIDIA SkillSpector 这类静态扫描器同层，价值在于本地、零依赖、可进 CI、可当 skill 随身带
-- 运行时强制（manifest 声明能力 + hook 校验越界拦截）是下一步的方向，本工作流的阶段 3 先用"可观测 + 人工确认"占位
-- 所有命令只读；任何修改动作必须用户确认
+- 运行时守卫是**机器级底线**，不是沙箱：deny 列表精度优先（宁可漏、不误杀正常工作流），per-skill 归因要等 harness 提供 skill 来源信号；enforce 模式前请先跑 audit 观察
+- 所有命令只读（guard 的审计日志除外）；任何修改动作必须用户确认

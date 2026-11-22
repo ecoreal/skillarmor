@@ -134,5 +134,73 @@ class CliTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0)
 
 
+class ManifestSpecTests(unittest.TestCase):
+    """能力清单（capabilities frontmatter）静态校验：解析 + 声明/行为对账。"""
+
+    def test_parse_good_manifest(self):
+        import manifest
+        caps = manifest.parse_capabilities(
+            (FIX / "skills" / "manifest-good" / "SKILL.md").read_text(encoding="utf-8")
+        )
+        self.assertEqual(caps["net"]["domains"], ["wttr.in", "api.weather.gov"])
+
+    def test_parse_inline_and_list_styles(self):
+        import manifest
+        caps = manifest.parse_capabilities(
+            "---\nname: x\ncapabilities:\n  fs:\n    write: [\"/tmp/**\", '/var/x']\n"
+            "    read:\n      - ~/a/**\n      - ~/b/**\n  net:\n    domains: [\"a.b\"]\n---\nbody\n"
+        )
+        self.assertEqual(caps["fs"]["write"], ["/tmp/**", "/var/x"])
+        self.assertEqual(caps["fs"]["read"], ["~/a/**", "~/b/**"])
+        self.assertEqual(caps["net"]["domains"], ["a.b"])
+
+    def test_parse_errors_are_specific(self):
+        import manifest
+        with self.assertRaisesRegex(manifest.ManifestParseError, "未知能力组"):
+            manifest.parse_capabilities(
+                "---\ncapabilities:\n  network:\n    domains: []\n---\n"
+            )
+        with self.assertRaisesRegex(manifest.ManifestParseError, "为空"):
+            manifest.parse_capabilities(
+                "---\ncapabilities:\n  net:\ndomains: []\n---\n"
+            )
+        self.assertEqual(
+            manifest.parse_capabilities("---\nname: x\ndescription: y\n---\nbody"),
+            {},
+        )
+
+    def test_domain_matching_semantics(self):
+        import manifest
+        self.assertTrue(manifest.domain_allowed("wttr.in", ["wttr.in"]))
+        self.assertTrue(manifest.domain_allowed("v2.api.example.com", ["api.example.com"]))
+        self.assertTrue(manifest.domain_allowed("v2.api.example.com", ["*.example.com"]))
+        self.assertFalse(manifest.domain_allowed("example.com.evil.io", ["example.com"]))
+        self.assertFalse(manifest.domain_allowed("evil.example", ["*.example.com"]))
+
+    def test_good_manifest_no_findings(self):
+        findings = [f for f in run_scan(FIX / "skills" / "manifest-good")
+                    if f.rule.startswith("MANIFEST-")]
+        self.assertEqual(findings, [])
+
+    def test_undeclared_domain_flagged(self):
+        findings = [f for f in run_scan(FIX / "skills" / "manifest-bad")
+                    if f.rule == "MANIFEST-undeclared-net"]
+        self.assertEqual(len(findings), 1)
+        self.assertIn("telemetry.evil.example", findings[0].snippet)
+        self.assertNotIn("api.example.com/v1", findings[0].snippet)
+        self.assertEqual(findings[0].severity, "medium")
+
+    def test_broken_manifest_flagged_low(self):
+        findings = [f for f in run_scan(FIX / "skills" / "manifest-broken")
+                    if f.rule == "MANIFEST-parse"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "low")
+
+    def test_skill_without_capabilities_is_not_flagged(self):
+        findings = [f for f in run_scan(FIX / "skills" / "defensive")
+                    if f.rule.startswith("MANIFEST-")]
+        self.assertEqual(findings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

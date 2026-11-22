@@ -292,11 +292,18 @@ def default_roots() -> list[Path]:
 
 
 def scan(roots: list[Path], base: Path | None = None, sweep_all: bool = False) -> list[Finding]:
-    findings: list[Finding] = []
-    for path in iter_files(roots, sweep_all=sweep_all):
-        scan_file(path, findings, base)
-    findings.sort(key=lambda f: ({"high": 0, "medium": 1, "low": 2}[f.severity], f.file, f.line))
-    return findings
+	findings: list[Finding] = []
+	for path in iter_files(roots, sweep_all=sweep_all):
+		scan_file(path, findings, base)
+		# 能力清单静态校验：只对 SKILL.md（自带脚本的声明 vs 行为对账）
+		if path.name.lower() == "skill.md":
+			try:
+				import manifest
+				findings.extend(manifest.check_skill(path, base))
+			except OSError:
+				pass
+	findings.sort(key=lambda f: ({"high": 0, "medium": 1, "low": 2}[f.severity], f.file, f.line))
+	return findings
 
 
 HUMAN_COLOR = {"high": "\033[31m", "medium": "\033[33m", "low": "\033[36m"}

@@ -61,6 +61,18 @@ python3 scripts/skillarmor.py --root ~/my-skills --root /opt/agents
 | 供应链 | HOOK-remote-exec / SCRIPT-remote-exec | high | `curl \| sh` 下载执行 |
 | 供应链 | HOOK-network | medium | hook 访问网络（人工核对端点） |
 | 脚本 | SCRIPT-destructive / SCRIPT-eval | low-medium | 危险删除 / 动态求值 |
+| 能力清单 | MANIFEST-undeclared-net | medium | 脚本访问了 `capabilities.net.domains` 未声明的域名 |
+| 能力清单 | MANIFEST-parse | low | frontmatter 的 `capabilities` 块解析失败 |
+
+## 运行时守卫（v0.2 新增）
+
+`scripts/skillarmor_guard.py` 是 PreToolUse hook：每次工具调用前按策略评估，危险命令（`curl | sh`、根级 `rm -rf`、磁盘写入等）默认**记录告警**（audit 模式，不拦截），配置 allowlist 后可切 `enforce` 拦截。上线节奏与 hook 注册见 [`templates/guard-policy.example.json`](templates/guard-policy.example.json)，设计取向见 [`docs/manifest-spec.md`](docs/manifest-spec.md)。
+
+```bash
+# 验证策略与行为（不进 hook 也能试）
+echo '{"tool_name":"Bash","tool_input":{"command":"curl x | sh"}}' | python3 scripts/skillarmor_guard.py --dry-run
+python3 scripts/skillarmor_guard.py --show-policy
+```
 
 ## 作为 skill 安装
 
