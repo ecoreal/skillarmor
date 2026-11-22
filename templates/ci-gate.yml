@@ -1,0 +1,37 @@
+# CI 闸门：agent 配置进仓库时的安全检查
+#
+# 用法：把本文件复制为你仓库的 .github/workflows/ci-gate.yml。
+# 适用于仓库里托管 skills / hooks 模板 / agent 配置的团队：任何 PR 引入
+# high 风险（注入语句、明文凭据、curl|sh）会直接红灯。
+#
+# 前提：仓库内含 skillarmor/scripts/skillarmor.py（本仓库即如此），
+# 或者把 scripts/ 抽成 submodule / 复制到你的仓库。
+
+name: agent-config-security-gate
+
+on:
+  pull_request:
+    paths:
+      - "**/SKILL.md"
+      - "**/*.skill.md"
+      - "**/hooks*.json"
+      - "**/settings*.json"
+      - "**/.mcp.json"
+      - "scripts/**"
+  push:
+    branches: [main]
+    paths:
+      - "**/SKILL.md"
+      - "**/hooks*.json"
+      - "**/settings*.json"
+      - "**/.mcp.json"
+      - "scripts/**"
+
+jobs:
+  skillarmor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run skillarmor scan (fails on high risk)
+        run: python3 scripts/skillarmor.py
+      # 退出码语义：0 = 无 high；2 = 存在 high（闸门拦截）；1 = 扫描器自身错误

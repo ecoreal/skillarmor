@@ -18,6 +18,17 @@ agent 的配置文件本身就是攻击面：
 
 SkillArmor 把这些变成一份可审阅的风险清单。
 
+## 不只是扫描器：四阶段安全工作流
+
+扫描回答"现在哪里疼"，[方法论](docs/methodology.md)回答"怎么长期保持健康"：
+
+1. **引入前** — 任何第三方 skill/MCP 装进本机前先过体检（[preflight-scan.sh](templates/preflight-scan.sh)）
+2. **配置加固** — 权限最小化、凭据出配置、hooks 白名单（含"先轮换再删配置"的处置顺序）
+3. **运行时可观测** — 审批模式收敛 + 工具调用画像（配合 [zcusage](https://github.com/ecoreal/zcusage) 的 destructive/network 统计）
+4. **持续回归** — [CI 闸门](templates/ci-gate.yml) + [每周定期审计](templates/scheduled-audit.yml)兜住配置漂移
+
+真实案例见 [docs/case-study.md](docs/case-study.md)：一次十分钟体检扫出明文 token + 全局 `bypassPermissions` 两个 high，以及为什么它们此前从未被任何流程发现。
+
 ## 使用
 
 ```bash

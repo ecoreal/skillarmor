@@ -1,0 +1,46 @@
+# 定期审计：每周对本机 agent 配置跑一次全量扫描
+#
+# 用法：复制为你仓库的 .github/workflows/scheduled-audit.yml。
+# 注意：GitHub runner 扫描不到你的本机 ~/.claude / ~/.zcode —— 这个模板
+# 的两种用法：
+#   A. 仓库自带一份 agent 配置快照（如 dotfiles 仓库）：直接扫
+#   B. 本机定时：用 cron / systemd timer 跑 scripts/skillarmor.py --json
+#      > ~/var/log/skillarmor/$(date +%F).json，漂移自己会显形。
+#      本文件演示 A；B 的 systemd timer 示例见文件底部注释。
+
+name: scheduled-agent-config-audit
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # 每周一 03:17（避开整点拥挤）
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan agent config snapshot
+        id: scan
+        run: |
+          set +e
+          python3 scripts/skillarmor.py --json > skillarmor-report.json
+          code=$?
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          # 2 = high 风险：审计任务允许红，但要汇报
+          exit 0
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillarmor-report-${{ github.run_id }}
+          path: skillarmor-report.json
+      - name: Fail on high risk
+        if: steps.scan.outputs.exit == '2'
+        run: |
+          echo "High-risk findings present — review the uploaded report."
+          exit 2
+
+# 本机定时（用法 B）systemd 示例：
+#   ~/.config/systemd/user/skillarmor-audit.{service,timer}
+#   [Service] ExecStart=/usr/bin/env python3 %h/workspace/skillarmor/scripts/skillarmor.py --json >> %h/var/log/skillarmor.json
+#   [Timer] OnCalendar=Mon *-*-* 03:17:00 Persistent=true
